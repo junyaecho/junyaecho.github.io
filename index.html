@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- v5版本新增一个价格计算器 -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>话术_v5</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table tr:hover td {
+            background-color: rgba(128, 128, 128, 0.050);
+        }
+
+        tr.copied {
+            background-color: #f4033f3a;
+            transition: background-color 0.15s ease;
+        }
+
+        th,
+        td {
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        span {
+            white-space: normal;
+        }
+
+        .tabs {
+            height: 20px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            background: #f0f0f0;
+            border-bottom: 2px solid #ccc;
+            box-sizing: border-box;
+            font-size: 10px;
+        }
+
+        .tab {
+            padding: 6px 12px;
+            line-height: 1;
+            cursor: pointer;
+            border-right: 1px solid #ccc;
+            user-select: none;
+            height: 10px;
+        }
+
+        .tab.active {
+            background: #fff;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .calc-widget {
+            position: fixed;
+            bottom: 0px;
+            right: 0px;
+            width: 150px;                /* 可以改成更小（比如180） */
+            background: #fff;
+            border: 1px solid #d0d6df;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            z-index: 9999;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .calc-header {
+            display: flex;
+            align-items: center;
+            padding: 3px 3px;
+            cursor: grab;
+            background: linear-gradient(180deg,#fafbfd,#f0f3f8);
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border-bottom: 1px solid #e6ecf5;
+        }
+
+        .calc-tabs { display:flex; gap:6px; }
+
+        .calc-tab {
+            padding: 3px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            background: transparent;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        .calc-tab.active {
+            background: #fff;
+            border: 1px solid #cfd8e6;
+            font-weight: 700;
+        }
+
+        .calc-body { padding: 4px; }
+
+        .calc-body input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px 6px;
+            border: 1px solid #e0e6ee;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            font-size: 13px;
+            height: 30px;
+        }
+
+        .calc-row { display:flex; align-items:center; gap:6px; }
+        .calc-result {
+            flex:1;
+            padding:2px 3px;
+            border-radius:6px;
+            background:#f7fbff;
+            border:1px solid #dfeafc;
+            text-align:center;
+            font-weight:700;
+            font-size:13px;
+            /* 注意：不要设置 cursor:pointer 或 hover 样式（不显示点击提示） */
+        }
+
+        .calc-clear-btn {
+            padding:4px 6px;
+            border-radius:6px;
+            border:1px solid #e0e6ee;
+            background:#fff;
+            font-size:12px;
+            cursor:pointer;
+            line-height:1;
+            min-width:36px;
+            box-sizing:border-box;
+        }
+
+        .dragging { cursor: grabbing !important; }
+        @media (max-width:360px){
+            .calc-widget { width: 88vw; right:6vw; left:6vw; bottom:10px; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(1)">Facebook</div>
+        <div class="tab" onclick="switchTab(2)">Facebook发帖</div>
+        <div class="tab" onclick="switchTab(3)">WhatsApp</div>
+        <div class="tab" onclick="switchTab(4)">TikTok</div>
+        <div class="tab" onclick="switchTab(5)">TikTok发作品评论</div>
+    </div>
+
+    <div id="tab1" class="tab-content active">
+        <table>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Buongiorno,
+Sei ancora interessato al mio prodotto?</span>
+                </td>
+                <td>
+                    <span>早上好
+您对我发布的产品感兴趣吗？</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Ciao, ti ho mandato un messaggio privato</span>
+                </td>
+                <td>
+                    <span>你好，我给你发了一条私信</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Grazie per il tuo "mi piace" sulla mia foto del prodotto. Se sei interessato a questo articolo o hai qualche domanda, non esitare a contattarmi!</span>
+                </td>
+                <td>
+                    <span>感谢您对我的产品照片的“喜欢”。如果您对此产品感兴趣或有任何疑问，请随时与我联系！</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Per una tempestiva comunicazione, puoi darmi il tuo numero WhatsApp?
+Poi ti invierò un messaggio tramite WhatsApp</span>
+                </td>
+                <td>
+                    <span>为了方便及时沟通，请问您能提供一下您的WhatsApp号码吗？
+我会通过WhatsApp给您发消息。</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Scrivimi in privato</span>
+                </td>
+                <td>
+                    <span>私信我</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Ciao, ti scrivo in privato</span>
+                </td>
+                <td>
+                    <span>你好，我私下写信给你</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Ciao
+Se sei interessato ai prodotti che pubblico per favore aggiungi i miei amici di Facebook o contattami in privato</span>
+                </td>
+                <td>
+                    <span>你好
+如果您对我发布的产品感兴趣，请添加我的 Facebook 好友或私下联系我</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Quali prezzi degli articoli vorresti sapere?</span>
+                </td>
+                <td>
+                    <span>您想了解哪些商品价格？</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Facciamo vendite on-line</span>
+                </td>
+                <td>
+                    <span>我们做网上销售</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>La nostra pagina Facebook condivide solo immagini, puoi ottenere informazioni sui prodotti su WhatsApp</span>
+                </td>
+                <td>
+                    <span>我们的Facebook页面只分享图片，产品信息请通过WhatsApp获取</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Ti assicuriamo che ti scriverò solo tramite WhatsApp e non ti disturberò più di tanto.
+Se vuoi dammi il tuo Whatsapp e ti aggiungo
+Grazie</span>
+                </td>
+                <td>
+                    <span>我们向您保证，我只会通过 WhatsApp 给您写信，不会过多打扰您。
+如果你想给我你的whatsapp，我会加你
+谢谢</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Produciamo prodotti di altissima qualità, repliche perfette</span>
+                </td>
+                <td>
+                    <span>我们生产最高品质的产品，完美的复制品</span>
+                </td>
+            </tr>
+            <!-- <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>被复制文本</span>
+                </td>
+                <td>
+                    <span>展示文本</span>
+                </td>
+            </tr> -->
+
+        </table>
+    </div>
+
+    <div id="tab2" class="tab-content">
+        <table>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Se ti piacciono questi stili, scrivimi pure in DM😉</span>
+                </td>
+                <td>
+                    <span>如果你喜欢这些风格，请私信我 😉</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Inutilizzato, ancora disponibile, dettagli in DM</span>
+                </td>
+                <td>
+                    <span>全新未使用，仍然有货，详情请私信</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Vari stili di moda, trovi tutto nel profilo😉</span>
+                </td>
+                <td>
+                    <span>各种时尚风格，我的个人主页里应有尽有 😉</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Chi ama questo stile può contattarmi in privato❤️</span>
+                </td>
+                <td>
+                    <span>喜欢这种风格的朋友可以私信我❤️</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Altre foto, contattatemi</span>
+                </td>
+                <td>
+                    <span>更多图片，请联系我</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Mai utilizzato, può essere regalato a familiari e amici</span>
+                </td>
+                <td>
+                    <span>全新未使用，可作为礼物送给家人和朋友。</span>
+                </td>
+            </tr>
+
+        </table> 
+    </div>
+
+    <div id="tab3" class="tab-content">
+        <table>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Place your order tonight and receive a complimentary LV bag charm—limited availability, so act fast!</span>
+                </td>
+                <td>
+                    <span>今晚下单，即赠LV包包挂件一枚，数量有限，先到先得！</span>
+                </td>
+            </tr>   
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>If you need to make a purchase, you can give me your PayPal account and I will send you a PayPal bill.</span>
+                </td>
+                <td>
+                    <span>如果你需要购买，你可以给我你的PayPal账号，我给你发送PayPal账单</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello friend, do you still need to buy this bag? I can give you an extra $10 discount if you buy it today.  </span>
+                </td>
+                <td>
+                    <span>你好朋友，请问这个包你还需要买吗？今天购买我可以额外给你10美金的折扣</span>
+                </td>   
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>For the first cooperation, we support payment of 50% deposit. After the factory production, I will ask you to confirm. After you confirm, you pay the balance and we will ship it for you. Of course, if you are not interested in the produced bag, we can also refund you.</span>
+                </td>
+                <td>    
+                    <span>首次合作我们支持支付百分之50的定金，工厂生产之后我会请你进行确认，当你确认之后你支付尾款，我们为你进行发货，当然如果你对生产的包包不感兴趣我们也可以为你进行退款</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Please send me your delivery address in the following format:
+Name:
+Suname:
+Address:
+City:
+State:
+Country:
+Zip:
+Phone Number:</span>
+                </td>
+                <td>
+                    <span>填写收货地址</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>We have received your payment and are now coordinating with the factory to prepare your order. It will be shipped soon.</span>
+                </td>
+                <td>
+                    <span>我们已收到您的付款，现正安排工厂备货，很快为您发出</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Your order will be shipped via FedEx, with an estimated delivery time of 5–15 business days.</span>
+                </td>
+                <td>
+                    <span>包裹将通过FedEx联邦快递寄出，预计5–15个工作日内送达</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>This is the parcel tracking number.</span>
+                </td>
+                <td>
+                    <span>这是包裹追踪号码</span>
+                </td>
+            </tr>
+
+        </table>
+    </div>
+
+    <div id="tab4" class="tab-content">
+<table>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hi, we are a bags supplier from China. We specialize in providing master quality products on the market. Welcome to contact me🥰WA: +852 6841 2374</span>
+                </td>
+                <td>
+                    <span>您好，我们是来自中国的行李箱供应商。我们专注于提供市场上最优质的产品。欢迎联系我🥰WA: +852 6841 2374</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello, I sent you a private message for cooperation, please check it out🥰🥰🥰</span>
+                </td>
+                <td>
+                    <span>你好，合作事宜我私信给你了，请注意查收🥰🥰🥰</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello, partner.
+My name is Kallen, and I'm from a handbag factory in Hong Kong.
+Your videos and fan base are a great fit for our products.
+I can mail you free samples and share commissions with you on every order.
+I look forward to working with you.
+WhatsApp: +852 6841 2374</span>
+                </td>
+                <td>
+                    <span>您好，合作伙伴。
+我叫Lisa，来自香港一家手袋工厂。
+您的视频和粉丝群与我们的产品非常契合。
+我可以邮寄免费样品给您，并且每笔订单都会有佣金。
+期待与您合作。
+WhatsApp：+852 6841 2374</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello, I am a bags supplier from China, with a full range of styles and colors. Welcome to contact me🥰</span>
+                </td>
+                <td>
+                    <span>你好，我是来自中国的包包供应商，款式和颜色齐全，欢迎联系我🥰</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello, thank you for liking my video. Are you interested in the product?🥰</span>
+                </td>
+                <td>
+                    <span>你好，谢谢你喜欢我的视频。你对产品感兴趣吗？🥰</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Hello, thank you for following me. Are you interested in any of the products on my page? 🥰</span>
+                </td>
+                <td>
+                    <span>您好，感谢您的关注！您对我的页面上的产品有兴趣吗？🥰</span>
+                </td>
+            </tr>
+
+        </table>
+    </div>
+    <div id="tab5" class="tab-content">
+        <table>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Limited-time perk — save around ~5% when you place an order. DM me for details!</span>
+                </td>
+                <td>
+                    <span>限时优惠——下单立省约5%。详情请私信我！</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Flash offer! Extra ~5% off on select pieces — message me for your code 💌</span>
+                </td>
+                <td>
+                    <span>闪购优惠！指定商品额外约5%优惠——私信我获取优惠码💌</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Want an exclusive saving on our handbag collection? Send a DM and I’ll share the details (≈5%).</span>
+                </td>
+                <td>
+                    <span>想享受我们手袋系列的独家优惠吗？请私信我，我会分享详情（约5%）。</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Heads-up: some styles have a short-term ~5% saving — drop a message to learn more.</span>
+                </td>
+                <td>
+                    <span>注意：部分款式短期内可享约5%优惠——请私信我了解更多信息。</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>US friends — limited specials on select styles (about 5% off). DM me and I’ll arrange it.</span>
+                </td>
+                <td>
+                    <span>美国朋友——指定款式限时特惠（约5%优惠）。私信我，我会安排。</span>
+                </td>
+            </tr>
+            <tr onclick="copyToClipboard(this)">
+                <td>
+                    <span>Interested? I can reserve a limited-time ~5% saving for you — DM for quick details.</span>
+                </td>
+                <td>
+                    <span>感兴趣吗？我可以为您预留约5%的限时优惠——私信我快速了解详情。</span>
+                </td>
+            </tr>
+
+        </table>
+    </div>
+
+    <!-- <div id="calcWidget" class="calc-widget" aria-label="价格计算器">
+        <div id="calcHeader" class="calc-header" title="拖动移动">
+            <div class="calc-tabs" role="tablist" aria-label="公式页签">
+                <div class="calc-tab active" data-index="0" data-target="contentCalc1">公式1</div>
+                <div class="calc-tab" data-index="1" data-target="contentCalc2">公式2</div> -->
+                <!-- 若要新增公式3，请在这里添加一个 calc-tab -->
+            </div>
+        </div>
+
+        <!-- <div class="calc-body"> -->
+            <!-- 公式1（data-formula 指向对应的函数名） -->
+            <!-- <div id="contentCalc1" class="calc-content" data-formula="formula1">
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="拿货价" />
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="续重" />
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="运费" />
+                <div style="height:2px"></div>
+                <div class="calc-row">
+                    <div class="calc-result calc-result-1">结果：0.00</div>
+                    <button class="calc-clear-btn" data-target="contentCalc1">清空</button>
+                </div>
+            </div> -->
+
+            <!-- 公式2 -->
+            <!-- <div id="contentCalc2" class="calc-content" data-formula="formula2" style="display:none">
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="拿货价" />
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="续重" />
+                <input type="number" inputmode="decimal" class="calc-input" placeholder="运费" />
+                <div style="height:2px"></div>
+                <div class="calc-row">
+                    <div class="calc-result calc-result-2">结果：0.00</div>
+                    <button class="calc-clear-btn" data-target="contentCalc2">清空</button>
+                </div>
+            </div> -->
+
+            <!-- 若要新增公式3，请在这里复制一个 .calc-content 块，设置 data-formula="formula3" 并放好 3 个输入与结果区域 -->
+        </div>
+    </div>
+
+    <script>
+        async function copyToClipboard(trElement) {
+            try {
+                var span = trElement.querySelector('span');
+                var text = span ? (span.textContent || span.innerText).trim() : '';
+
+                if (!text) {
+                    console.warn('没有可复制的文本');
+                    return;
+                }
+
+                await navigator.clipboard.writeText(text);
+
+                var tr = trElement;
+                if (tr) {
+                    if (tr._copyTimeout) {
+                        clearTimeout(tr._copyTimeout);
+                        tr._copyTimeout = null;
+                        tr.classList.remove('copied');
+                    }
+
+                    tr.classList.add('copied');
+                    tr._copyTimeout = setTimeout(function () {
+                        tr.classList.remove('copied');
+                        tr._copyTimeout = null;
+                    }, 180);
+                }
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
+        }
+
+        function switchTab(tabIndex) {
+            var tabs = document.querySelectorAll('.tab');
+            var contents = document.querySelectorAll('.tab-content');
+            tabs.forEach((tab, i) => {
+                if (i === tabIndex - 1) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            contents.forEach((content, i) => {
+                if (i === tabIndex - 1) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        }
+
+        // function formula1(a, b, c) {
+        //     var B2 = Number(a) || 0;
+        //     var B3 = Number(b) || 0;
+        //     var B4 = Number(c) || 0;
+        //     if (B2 >= 1000) {
+        //         return ((B2 * 1.4 + B3) / 6.5) * 1.05 + B4;
+        //     } else if (B2 >= 380) {
+        //         return ((B2 * 1.4 + B3) / 6.5) * 1.05 + B4;
+        //     } else if (B2 > 0) {
+        //         return ((B2 + 150 + B3) / 6.5) * 1.05 + B4;
+        //     } else {
+        //         return 0;
+        //     }
+        // }
+
+        // // formula2 对应 B7 的公式：
+        // // =IF(C2>=250,((C2*1.4+C3)/6.5)*1.05+C4,IF(C2>0,((C2+100+C3)/6.5)*1.05+C4,0))
+        // function formula2(a, b, c) {
+        //     var C2 = Number(a) || 0;
+        //     var C3 = Number(b) || 0;
+        //     var C4 = Number(c) || 0;
+        //     if (C2 >= 250) {
+        //         return ((C2 * 1.4 + C3) / 6.5) * 1.05 + C4;
+        //     } else if (C2 > 0) {
+        //         return ((C2 + 100 + C3) / 6.5) * 1.05 + C4;
+        //     } else {
+        //         return 0;
+        //     }
+        // }
+
+        // // 若要新增 formula3，请在这里定义：function formula3(a,b,c){ ... }
+
+        // // 格式化显示
+        // function formatNumber(n) {
+        //     if (!isFinite(n)) return '0.00';
+        //     return Number(n).toFixed(2);
+        // }
+
+        // // 计算器通用计算函数：自动查找带 data-formula 的内容并调用对应函数
+        // function calcComputeAll() {
+        //     var contents = document.querySelectorAll('.calc-content');
+        //     contents.forEach(function (content) {
+        //         var funcName = content.dataset.formula;
+        //         if (!funcName) return;
+        //         var fn = window[funcName];
+        //         if (typeof fn !== 'function') return;
+        //         var inputs = content.querySelectorAll('input.calc-input');
+        //         var args = Array.from(inputs).map(function (inp) { return inp.value; });
+        //         var value = fn.apply(null, args);
+        //         var resultEl = content.querySelector('.calc-result');
+        //         if (resultEl) resultEl.textContent = '€ ' + formatNumber(value);
+        //     });
+        // }
+
+        // // 绑定输入监听和清空按钮
+        // (function setupCalcListeners() {
+        //     // delegate inputs
+        //     document.querySelectorAll('.calc-input').forEach(function (inp) {
+        //         inp.addEventListener('input', calcComputeAll);
+        //     });
+
+        //     // clear buttons
+        //     document.querySelectorAll('.calc-clear-btn').forEach(function (btn) {
+        //         btn.addEventListener('click', function () {
+        //             var targetId = btn.dataset.target;
+        //             var container = document.getElementById(targetId);
+        //             if (!container) return;
+        //             container.querySelectorAll('input.calc-input').forEach(function (i) { i.value = ''; });
+        //             calcComputeAll();
+        //             var first = container.querySelector('input.calc-input');
+        //             if (first) first.focus();
+        //         });
+        //     });
+
+        //     // 结果区点击复制（**无**样式反馈）
+        //     document.querySelectorAll('.calc-result').forEach(function (resEl) {
+        //         resEl.addEventListener('click', function (ev) {
+        //             // 取出数字部分并复制（去掉“€：102.69：”前缀）
+        //             var txt = (resEl.textContent || '').replace('€ ', '').trim();
+        //             // 直接写入剪贴板，无任何视觉反馈
+        //             navigator.clipboard.writeText(txt).catch(function (e) { /* 静默失败 */ });
+        //         });
+        //     });
+
+        //     // 初始计算一次
+        //     calcComputeAll();
+        // })();
+
+        // /********** 计算器标签切换（通用，支持后续添加更多 calc-tab） **********/
+        // (function setupCalcTabs() {
+        //     var tabs = document.querySelectorAll('.calc-tab');
+        //     var contents = document.querySelectorAll('.calc-content');
+
+        //     function activate(index) {
+        //         tabs.forEach(function (t, i) {
+        //             if (i === index) t.classList.add('active'); else t.classList.remove('active');
+        //         });
+        //         contents.forEach(function (c, i) {
+        //             c.style.display = (i === index) ? '' : 'none';
+        //         });
+        //         calcComputeAll();
+        //     }
+
+        //     tabs.forEach(function (t, i) {
+        //         t.addEventListener('click', function () { activate(i); });
+        //         t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(i); } });
+        //     });
+        // })();
+
+        // /********** 拖动逻辑（独立于页面其它逻辑） **********/
+        // (function setupDrag() {
+        //     var widget = document.getElementById('calcWidget');
+        //     var header = document.getElementById('calcHeader');
+        //     var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+        //     function getPoint(e) {
+        //         if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        //         if (e.changedTouches && e.changedTouches[0]) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        //         return { x: e.clientX, y: e.clientY };
+        //     }
+
+        //     function onPointerDown(e) {
+        //         e.preventDefault();
+        //         dragging = true;
+        //         widget.classList.add('dragging');
+        //         var pt = getPoint(e);
+        //         startX = pt.x; startY = pt.y;
+        //         var rect = widget.getBoundingClientRect();
+        //         startLeft = rect.left; startTop = rect.top;
+
+        //         window.addEventListener('pointermove', onPointerMove);
+        //         window.addEventListener('pointerup', onPointerUp);
+        //         window.addEventListener('mousemove', onPointerMove);
+        //         window.addEventListener('mouseup', onPointerUp);
+        //         window.addEventListener('touchmove', onPointerMove, { passive: false });
+        //         window.addEventListener('touchend', onPointerUp);
+        //     }
+
+        //     function onPointerMove(e) {
+        //         if (!dragging) return;
+        //         e.preventDefault();
+        //         var pt = getPoint(e);
+        //         var dx = pt.x - startX, dy = pt.y - startY;
+        //         var newLeft = startLeft + dx, newTop = startTop + dy;
+        //         var w = widget.offsetWidth, h = widget.offsetHeight;
+        //         var minLeft = 8, minTop = 8, maxLeft = window.innerWidth - w - 8, maxTop = window.innerHeight - h - 8;
+        //         if (newLeft < minLeft) newLeft = minLeft;
+        //         if (newLeft > maxLeft) newLeft = maxLeft;
+        //         if (newTop < minTop) newTop = minTop;
+        //         if (newTop > maxTop) newTop = maxTop;
+        //         widget.style.left = newLeft + 'px';
+        //         widget.style.top = newTop + 'px';
+        //         widget.style.right = 'auto';
+        //         widget.style.bottom = 'auto';
+        //     }
+
+        //     function onPointerUp() {
+        //         dragging = false;
+        //         widget.classList.remove('dragging');
+        //         window.removeEventListener('pointermove', onPointerMove);
+        //         window.removeEventListener('pointerup', onPointerUp);
+        //         window.removeEventListener('mousemove', onPointerMove);
+        //         window.removeEventListener('mouseup', onPointerUp);
+        //         window.removeEventListener('touchmove', onPointerMove);
+        //         window.removeEventListener('touchend', onPointerUp);
+        //     }
+
+        //     header.addEventListener('pointerdown', onPointerDown);
+        //     header.addEventListener('mousedown', onPointerDown);
+        //     header.addEventListener('touchstart', onPointerDown, { passive: false });
+        // })();
+    </script>
+</body>
+
+</html>
